@@ -4,42 +4,56 @@ class Boat < ActiveRecord::Base
   has_many    :classifications, through: :boat_classifications
 
   def self.first_five
-    # all.limit(5)
+    select(:name).limit(5)
   end
 
   def self.dinghy
-    # where("length < 20")
+    where("length < 20")
   end
 
   def self.ship
-    # where("length >= 20")
+    where("length >= ?", 20)
   end
 
   def self.last_three_alphabetically
-    # all.order(name: :desc).limit(3)
+    select(:name).order(name: :desc).limit(3)
   end
 
   def self.without_a_captain
-    # where(captain_id: nil)
+    where("captain_id IS ?", nil)
   end
 
   def self.sailboats
-    # includes(:classifications).where(classifications: { name: 'Sailboat' })
+    joins(:classifications).where("classifications.name" => "Sailboat")
   end
 
   def self.with_three_classifications
-    # This is really complex! It's not common to write code like this
-    # regularly. Just know that we can get this out of the database in
-    # milliseconds whereas it would take whole seconds for Ruby to do the same.
-    #
-    # joins(:classifications).group("boats.id").having("COUNT(*) = 3").select("boats.*")
-  end
-
-  def self.non_sailboats
-    # where("id NOT IN (?)", self.sailboats.pluck(:id))
+    joins(:classifications).group("boats.name").having("count(boat_id) = 3")
   end
 
   def self.longest
-    # order('length DESC').first
+    order("length DESC").first
   end
+
+
+  def self.catamaran_operators
+    includes(boats: :classifications).where("classifications.name" => "Catamaran")
+  end
+
+  def self.sailors
+    includes(boats: :classifications).where("classifications.name" => "Sailboat").uniq
+  end
+
+  def self.motorboaters
+    includes(boats: :classifications).where("classifications.name" => "Motorboat").uniq
+  end
+
+  def self.talented_seamen
+    where("id IN (?)", self.sailors.pluck(:id) & self.motorboaters.pluck(:id))
+  end
+
+  def self.non_sailors
+    where.not("id IN (?)", self.sailors.pluck(:id))
+  end
+
 end
